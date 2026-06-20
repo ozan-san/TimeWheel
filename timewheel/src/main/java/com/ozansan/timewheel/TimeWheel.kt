@@ -1,0 +1,191 @@
+package com.ozansan.timewheel
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlin.math.abs
+
+/**
+ * iOS-style scrolling time picker.
+ *
+ * Two snapping wheels (hour and minute) with a highlighted center selection,
+ * fading edges and a subtle scale/alpha falloff away from center.
+ *
+ * @param onTimeChange invoked with (hour, minute) whenever the selection settles.
+ */
+@Composable
+fun TimeWheel(
+    modifier: Modifier = Modifier,
+    initialHour: Int = 0,
+    initialMinute: Int = 0,
+    is24Hour: Boolean = true,
+    visibleCount: Int = 5,
+    itemHeight: Dp = 40.dp,
+    onTimeChange: (hour: Int, minute: Int) -> Unit = { _, _ -> },
+) {
+    val hourCount = if (is24Hour) 24 else 12
+    val rowHeight = itemHeight * visibleCount
+
+    var hour = initialHour.coerceIn(0, hourCount - 1)
+    var minute = initialMinute.coerceIn(0, 59)
+
+    Box(modifier = modifier.height(rowHeight), contentAlignment = Alignment.Center) {
+        // Center selection highlight band.
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(itemHeight)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(0x14000000))
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            WheelColumn(
+                modifier = Modifier.width(72.dp),
+                count = hourCount,
+                initialIndex = hour,
+                visibleCount = visibleCount,
+                itemHeight = itemHeight,
+                label = { v -> if (is24Hour) "%02d".format(v) else "%d".format(if (v == 0) 12 else v) },
+            ) { selected ->
+                hour = selected
+                onTimeChange(hour, minute)
+            }
+
+            Box(
+                Modifier.width(16.dp).height(itemHeight),
+                contentAlignment = Alignment.Center,
+            ) {
+                WheelText(":", scale = 1f, alpha = 1f)
+            }
+
+            WheelColumn(
+                modifier = Modifier.width(72.dp),
+                count = 60,
+                initialIndex = minute,
+                visibleCount = visibleCount,
+                itemHeight = itemHeight,
+                label = { v -> "%02d".format(v) },
+            ) { selected ->
+                minute = selected
+                onTimeChange(hour, minute)
+            }
+        }
+    }
+}
+
+/** A single snapping wheel over [count] integer values. */
+@Composable
+private fun WheelColumn(
+    count: Int,
+    initialIndex: Int,
+    visibleCount: Int,
+    itemHeight: Dp,
+    modifier: Modifier = Modifier,
+    label: (Int) -> String,
+    onSelect: (Int) -> Unit,
+) {
+    val half = visibleCount / 2
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
+    val flingBehavior = rememberSnapFlingBehavior(listState)
+
+    // The centered value == first visible item index, thanks to the [half] blank
+    // padding rows added to the top and bottom of the list.
+    val centerIndex by remember {
+        derivedStateOf {
+            val offset = listState.firstVisibleItemScrollOffset
+            val first = listState.firstVisibleItemIndex
+            if (offset > 0) first + 1 else first
+        }
+    }
+
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress to listState.firstVisibleItemIndex }
+            .collect { (scrolling, _) ->
+                if (!scrolling) onSelect(centerIndex.coerceIn(0, count - 1))
+            }
+    }
+
+    LazyColumn(
+        modifier = modifier.height(itemHeight * visibleCount),
+        state = listState,
+        flingBehavior = flingBehavior,
+    ) {
+        items(half) { Spacer(itemHeight) }
+        items(count) { value ->
+            val distance = abs(value - centerIndex)
+            val alpha = (1f - distance * 0.28f).coerceIn(0.25f, 1f)
+            val scale = (1f - distance * 0.12f).coerceIn(0.7f, 1f)
+            Box(
+                Modifier.height(itemHeight).fillMaxWidth(),
+                contentAlignment = Alignment.Center,
+            ) {
+                WheelText(label(value), scale = scale, alpha = alpha)
+            }
+        }
+        items(half) { Spacer(itemHeight) }
+    }
+}
+
+@Composable
+private fun WheelText(text: String, scale: Float, alpha: Float) {
+    BasicText(
+        text = text,
+        style = TextStyle(
+            color = Color.Black,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.Center,
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                this.alpha = alpha
+                scaleX = scale
+                scaleY = scale
+            },
+    )
+}
+
+@Composable
+private fun Spacer(height: Dp) {
+    Box(Modifier.height(height).fillMaxSize())
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TimeWheelPreview() {
+    TimeWheel(initialHour = 9, initialMinute = 41)
+}

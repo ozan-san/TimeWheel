@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "TimeWheel"
 include(":app")
+include(":timewheel")

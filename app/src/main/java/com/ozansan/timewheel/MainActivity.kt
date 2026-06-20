@@ -20,9 +20,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             TimeWheelTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
+                    TimeWheel(
+                        modifier = Modifier.padding(innerPadding),
+                        initialHour = 9,
+                        initialMinute = 41,
                     )
                 }
             }
