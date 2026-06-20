@@ -10,6 +10,32 @@ and a subtle alpha/scale falloff away from center.
 - **`:timewheel`** — the reusable Compose library exposing the `TimeWheel` composable.
 - **`:app`** — a demo app that hosts `TimeWheel` in `MainActivity`.
 
+## Install
+
+Available via [JitPack](https://jitpack.io).
+
+**1. Add the JitPack repository** (`settings.gradle.kts`):
+
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://jitpack.io")
+    }
+}
+```
+
+**2. Add the dependency** (module `build.gradle.kts`):
+
+```kotlin
+dependencies {
+    implementation("com.github.ozan-san.TimeWheel:timewheel:<tag>")
+}
+```
+
+Replace `<tag>` with a released version (a git tag / GitHub release), e.g. `1.0.0`.
+
 ## Usage
 
 ```kotlin
