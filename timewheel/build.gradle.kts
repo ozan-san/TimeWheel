@@ -51,7 +51,7 @@ mavenPublishing {
     coordinates(
         groupId = "com.ozansan",
         artifactId = "timewheel",
-        version = providers.gradleProperty("VERSION_NAME").getOrElse("1.0.0-SNAPSHOT"),
+        version = providers.gradleProperty("VERSION_NAME").getOrElse("0.1.0-SNAPSHOT"),
     )
 
     pom {

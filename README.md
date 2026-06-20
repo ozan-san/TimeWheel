@@ -34,7 +34,7 @@ dependencies {
 }
 ```
 
-Replace `<tag>` with a released version (a git tag / GitHub release), e.g. `1.0.0`.
+Replace `<tag>` with a released version (a git tag / GitHub release), e.g. `0.1.0`.
 
 ## Usage
 
