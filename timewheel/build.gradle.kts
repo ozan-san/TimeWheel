@@ -67,7 +67,7 @@ mavenPublishing {
         developers {
             developer {
                 id.set("ozan-san")
-                name.set("Ozan San")
+                name.set("Ozan Şan")
                 url.set("https://github.com/ozan-san")
             }
         }
