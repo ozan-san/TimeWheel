@@ -12,29 +12,26 @@ and a subtle alpha/scale falloff away from center.
 
 ## Install
 
-Available via [JitPack](https://jitpack.io).
+Published to [Maven Central](https://central.sonatype.com/artifact/com.ozansan/timewheel).
 
-**1. Add the JitPack repository** (`settings.gradle.kts`):
+Ensure `mavenCentral()` is in your repositories (`settings.gradle.kts`):
 
 ```kotlin
 dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven("https://jitpack.io")
     }
 }
 ```
 
-**2. Add the dependency** (module `build.gradle.kts`):
+Add the dependency (module `build.gradle.kts`):
 
 ```kotlin
 dependencies {
-    implementation("com.github.ozan-san.TimeWheel:timewheel:<tag>")
+    implementation("com.ozansan:timewheel:0.1.0")
 }
 ```
-
-Replace `<tag>` with a released version (a git tag / GitHub release), e.g. `0.1.0`.
 
 ## Usage
 
