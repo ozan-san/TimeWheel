@@ -2,8 +2,12 @@
 
 An iOS-style scrolling time picker for Jetpack Compose.
 
-Two snapping wheels (hour and minute) with a highlighted center selection band
-and a subtle alpha/scale falloff away from center.
+Two snapping wheels (hour and minute) with a highlighted center selection band,
+a subtle alpha falloff and a 3D drum tilt away from center.
+
+## Preview
+
+<img src="timewheel/src/test/snapshots/videos/com.ozansan.timewheel_TimeWheelSnapshotTest_drum_timewheel.png" width="280" alt="TimeWheel drum animation" />
 
 ## Modules
 

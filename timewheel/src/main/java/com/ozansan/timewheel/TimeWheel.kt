@@ -40,13 +40,27 @@ import kotlin.math.roundToInt
  * drum of this radius, so a larger value = gentler curve. iOS' picker is subtle;
  * ~2 rows keeps edge items tilted but still readable instead of folding flat.
  */
-private const val DRUM_RADIUS_IN_ITEMS = 2f
+internal const val DRUM_RADIUS_IN_ITEMS = 2f
+
+/**
+ * X-axis tilt of a row [offset] item-heights from the center band. Wraps the row
+ * onto the drum (angle = arc length / radius), clamped at 90deg so its back face
+ * never shows. Shared so screenshot previews render the same curve the wheel does.
+ */
+internal fun drumRotationX(offset: Float): Float =
+    Math.toDegrees((offset / DRUM_RADIUS_IN_ITEMS).toDouble())
+        .toFloat()
+        .coerceIn(-90f, 90f)
+
+/** Fade applied to a row [distance] item-heights from center (1 at center, floored). */
+internal fun drumAlpha(distance: Float): Float =
+    (1f - distance * 0.28f).coerceIn(0.25f, 1f)
 
 /**
  * iOS-style scrolling time picker.
  *
  * Two snapping wheels (hour and minute) with a highlighted center selection,
- * fading edges and a subtle scale/alpha falloff away from center.
+ * an alpha falloff and a 3D drum tilt away from center.
  *
  * @param onTimeChange invoked with (hour, minute) whenever the selection settles.
  */
@@ -158,22 +172,11 @@ private fun WheelColumn(
         items(count) { value ->
             // Signed offset from the center band, in item units: negative above, positive below.
             val offset = value - centerFraction
-            val distance = abs(offset)
-            // Wrap the row onto a cylinder: angle = arc length / radius. Arc length is
-            // offset * itemHeight, radius is DRUM_RADIUS_IN_ITEMS * itemHeight, so the
-            // height cancels and the tilt is purely a function of how many rows away the
-            // item is. Clamp at 90deg (a row edge-on is the most it can turn before its
-            // back face would show).
-            val rotationX = Math
-                .toDegrees((offset / DRUM_RADIUS_IN_ITEMS).toDouble())
-                .toFloat()
-                .coerceIn(-90f, 90f)
-            val alpha = (1f - distance * 0.28f).coerceIn(0.25f, 1f)
             Box(
                 Modifier.height(itemHeight).fillMaxWidth(),
                 contentAlignment = Alignment.Center,
             ) {
-                WheelText(label(value), alpha = alpha, rotationX = rotationX)
+                WheelText(label(value), alpha = drumAlpha(abs(offset)), rotationX = drumRotationX(offset))
             }
         }
         items(half) { Spacer(itemHeight) }
@@ -181,7 +184,7 @@ private fun WheelColumn(
 }
 
 @Composable
-private fun WheelText(text: String, alpha: Float, rotationX: Float = 0f) {
+internal fun WheelText(text: String, alpha: Float, rotationX: Float = 0f) {
     BasicText(
         text = text,
         style = TextStyle(
