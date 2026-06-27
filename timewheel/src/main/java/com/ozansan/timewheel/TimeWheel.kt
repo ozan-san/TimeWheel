@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -32,6 +33,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
+import kotlin.math.roundToInt
+
+/**
+ * Cylinder radius of the wheel, expressed in item-heights. The rows wrap onto a
+ * drum of this radius, so a larger value = gentler curve. iOS' picker is subtle;
+ * ~2 rows keeps edge items tilted but still readable instead of folding flat.
+ */
+private const val DRUM_RADIUS_IN_ITEMS = 2f
 
 /**
  * iOS-style scrolling time picker.
@@ -88,7 +97,7 @@ fun TimeWheel(
                 Modifier.width(16.dp).height(itemHeight),
                 contentAlignment = Alignment.Center,
             ) {
-                WheelText(":", scale = 1f, alpha = 1f)
+                WheelText(":", alpha = 1f)
             }
 
             WheelColumn(
@@ -120,20 +129,22 @@ private fun WheelColumn(
     val half = visibleCount / 2
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
     val flingBehavior = rememberSnapFlingBehavior(listState)
+    val itemHeightPx = with(LocalDensity.current) { itemHeight.toPx() }
 
-    // The centered value == first visible item index, thanks to the [half] blank
-    // padding rows added to the top and bottom of the list.
-    val centerIndex by remember {
+    // Continuous centered value, in item units. The [half] blank padding rows make
+    // firstVisibleItemIndex == the value sitting in the center band, so adding the
+    // fractional scroll offset tracks the wheel position smoothly mid-scroll. This
+    // drives the per-row drum rotation/falloff; rounding it gives the settled value.
+    val centerFraction by remember {
         derivedStateOf {
-            val offset = listState.firstVisibleItemScrollOffset
-            val first = listState.firstVisibleItemIndex
-            if (offset > 0) first + 1 else first
+            listState.firstVisibleItemIndex + listState.firstVisibleItemScrollOffset / itemHeightPx
         }
     }
+    val centerIndex by remember { derivedStateOf { centerFraction.roundToInt() } }
 
     LaunchedEffect(listState) {
-        snapshotFlow { listState.isScrollInProgress to listState.firstVisibleItemIndex }
-            .collect { (scrolling, _) ->
+        snapshotFlow { listState.isScrollInProgress }
+            .collect { scrolling ->
                 if (!scrolling) onSelect(centerIndex.coerceIn(0, count - 1))
             }
     }
@@ -145,14 +156,24 @@ private fun WheelColumn(
     ) {
         items(half) { Spacer(itemHeight) }
         items(count) { value ->
-            val distance = abs(value - centerIndex)
+            // Signed offset from the center band, in item units: negative above, positive below.
+            val offset = value - centerFraction
+            val distance = abs(offset)
+            // Wrap the row onto a cylinder: angle = arc length / radius. Arc length is
+            // offset * itemHeight, radius is DRUM_RADIUS_IN_ITEMS * itemHeight, so the
+            // height cancels and the tilt is purely a function of how many rows away the
+            // item is. Clamp at 90deg (a row edge-on is the most it can turn before its
+            // back face would show).
+            val rotationX = Math
+                .toDegrees((offset / DRUM_RADIUS_IN_ITEMS).toDouble())
+                .toFloat()
+                .coerceIn(-90f, 90f)
             val alpha = (1f - distance * 0.28f).coerceIn(0.25f, 1f)
-            val scale = (1f - distance * 0.12f).coerceIn(0.7f, 1f)
             Box(
                 Modifier.height(itemHeight).fillMaxWidth(),
                 contentAlignment = Alignment.Center,
             ) {
-                WheelText(label(value), scale = scale, alpha = alpha)
+                WheelText(label(value), alpha = alpha, rotationX = rotationX)
             }
         }
         items(half) { Spacer(itemHeight) }
@@ -160,7 +181,7 @@ private fun WheelColumn(
 }
 
 @Composable
-private fun WheelText(text: String, scale: Float, alpha: Float) {
+private fun WheelText(text: String, alpha: Float, rotationX: Float = 0f) {
     BasicText(
         text = text,
         style = TextStyle(
@@ -173,8 +194,10 @@ private fun WheelText(text: String, scale: Float, alpha: Float) {
             .fillMaxWidth()
             .graphicsLayer {
                 this.alpha = alpha
-                scaleX = scale
-                scaleY = scale
+                this.rotationX = rotationX
+                // Push the camera back past the default (8f) so tilted rows foreshorten
+                // gently, matching iOS' shallow perspective rather than a hard squash.
+                cameraDistance = 12f * density
             },
     )
 }
